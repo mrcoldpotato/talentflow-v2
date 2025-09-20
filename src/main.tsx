@@ -1,27 +1,34 @@
-// src/main.tsx
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './styles/index.css'
-import { worker } from './api/msw/browser'
 import { seedIfEmpty } from './db/seed'
 
-async function init() {
-  // Start MSW in dev AND prod
-  await worker.start({ onUnhandledRequest: 'bypass' })
+function startApp() {
+  // wrap async logic inside an IIFE
+  (async () => {
+    // Seed the Dexie DB in both dev and prod
+    await seedIfEmpty()
 
-  // Seed Dexie if empty
-  await seedIfEmpty()
+    if (import.meta.env.DEV) {
+      // start MSW worker dynamically in dev
+      const { worker } = await import('./api/msw/browser')
+      worker.start({ onUnhandledRequest: 'bypass' })
+    } else {
+      // optionally start MSW in prod for preview
+      const { worker } = await import('./api/msw/browser')
+      worker.start({ onUnhandledRequest: 'bypass' })
+    }
 
-  // Render the app
-  createRoot(document.getElementById('root')!).render(
-    <React.StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </React.StrictMode>
-  )
+    createRoot(document.getElementById('root')!).render(
+      <React.StrictMode>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </React.StrictMode>
+    )
+  })()
 }
 
-init()
+startApp()
